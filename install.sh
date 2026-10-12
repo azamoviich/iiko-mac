@@ -80,6 +80,20 @@ if [[ ! -x "$WINE_APP/Contents/Resources/wine/bin/wine" ]]; then
   tar -xf "$CACHE/wine.tar.xz" -C "$ROOT"
   xattr -drs com.apple.quarantine "$WINE_APP" 2>/dev/null || true
 fi
+# Ошибка Wine: в GetAdaptersAddresses размер буфера DNS не инициализирован,
+# и при 4+ DNS-серверах на Mac стек переполняется — BackOffice падает в
+# iphlpapi. Вставляем недостающую инициализацию (только для известной сборки).
+IPHLP="$WINE_APP/Contents/Resources/wine/lib/wine/x86_64-windows/iphlpapi.dll"
+if [[ -f "$IPHLP" && "$(shasum -a 256 "$IPHLP" | cut -d' ' -f1)" == "a07204d0266419dc06b78f696470d7e1eaa5fa43a7c1a0e705bf41d6e0e6424e" ]]; then
+  say "Исправление ошибки Wine с DNS-серверами"
+  cp "$IPHLP" "$IPHLP.orig"; cp "$IPHLP" "$IPHLP.new"
+  # 0x11120 (свободное место в .text): size = 160; две исходные инструкции; jmp обратно на 0x57e8
+  printf '\xc7\x44\x24\x6c\xa0\x00\x00\x00\x48\x8d\x44\x24\x6c\x48\x89\x44\x24\x28\xe9\xb1\x46\xff\xff' | dd of="$IPHLP.new" bs=1 seek=$((0x11120)) conv=notrunc 2>/dev/null
+  # 0x57de: jmp на вставку вместо этих двух инструкций
+  printf '\xe9\x3d\xb9\x00\x00\x90\x90\x90\x90\x90' | dd of="$IPHLP.new" bs=1 seek=$((0x57de)) conv=notrunc 2>/dev/null
+  mv -f "$IPHLP.new" "$IPHLP"
+fi
+
 export PATH="$WINE_APP/Contents/Resources/wine/bin:$PATH"
 export WINEPREFIX="$ROOT/prefix"
 export WINEDEBUG=-all MVK_CONFIG_LOG_LEVEL=0

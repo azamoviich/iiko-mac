@@ -90,7 +90,7 @@ flowchart LR
     F --> G
 ```
 
-BackOffice is a WinForms + DevExpress application on .NET Framework 4.7.2. Getting it to boot on macOS meant getting past four walls:
+BackOffice is a WinForms + DevExpress application on .NET Framework 4.7.2. Getting it to boot on macOS meant getting past five walls:
 
 <details>
 <summary><b>1. Wine's built-in .NET (Mono) crashes DevExpress</b></summary>
@@ -131,6 +131,16 @@ The sneaky one. With 4.8 fully installed, BackOffice still failed with `Mono.Sys
 <br>
 
 iiko's setup is a WiX Burn bundle: a PE stub with two cabinet archives glued on the end. Most guides reach for 7-Zip here. To keep the installer dependency-free it instead finds the cabinets by their `MSCF` headers, carves them out with `tail`/`head`, extracts them with Wine's own `extrac32`, reads the bundle manifest to map payload ids to real file names, and unpacks the MSI with `msiexec /a`.
+</details>
+
+<details>
+<summary><b>5. Wine crashes when the Mac has more than three DNS servers</b></summary>
+
+<br>
+
+It worked on one Mac and crashed inside `iphlpapi` on another, right after opening the server settings. The crash dump had `02 00 00 00 08 08 08 08` where a pointer should be: the DNS server address `8.8.8.8`. Wine's `GetAdaptersAddresses` never initialises the size of its DNS list buffer, so with four or more servers the list overruns the stack. The bug is present in every current Wine release.
+
+The installer writes the missing instruction straight into `iphlpapi.dll`: 33 bytes, only for the build with a known checksum, with the original kept alongside as `.orig`.
 </details>
 
 Two more touches make it livable: Wine's `Mac Driver` is told to treat <kbd>⌘</kbd> as <kbd>Ctrl</kbd>, and common document types (`xlsx`, `pdf`, `docx`, …) are registered to hand off to macOS `open`, so exports land in your Mac apps instead of a "no application associated" error.
