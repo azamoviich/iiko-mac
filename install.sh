@@ -153,6 +153,9 @@ make_app() { # name exe_dir
   cat > "$app/Contents/MacOS/run" <<EOF
 #!/bin/zsh
 export PATH="$WINE_APP/Contents/Resources/wine/bin:\$PATH"
+# Регион Mac вроде en_UZ Wine не знает: раскладка получает код языка 0x1000,
+# и iiko падает при переключении на русскую раскладку (CultureNotFoundException).
+export LANG=ru_RU.UTF-8 LC_ALL=ru_RU.UTF-8
 export WINEPREFIX="$WINEPREFIX" WINEDLLOVERRIDES="mscoree=n" WINEDEBUG=-all MVK_CONFIG_LOG_LEVEL=0
 cd "$2" && exec wine BackOffice.exe
 EOF
