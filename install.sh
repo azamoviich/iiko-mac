@@ -22,6 +22,7 @@ WINE_URL="https://github.com/Gcenx/macOS_Wine_builds/releases/download/$WINE_VER
 NET48_URL="https://download.visualstudio.microsoft.com/download/pr/7afca223-55d2-470a-8edc-6a1739ae3252/abd170b4b0ec15ad0222a809b761a036/ndp48-x86-x64-allos-enu.exe"
 NET40_URL="https://download.microsoft.com/download/9/5/A/95A9616B-7A37-4AF6-BC36-D6EA96C8DAAE/dotNetFx40_Full_x86_x64.exe"
 IIKO_BASE="https://downloads.iiko.online"
+ICON_BASE="https://raw.githubusercontent.com/azamoviich/iiko-mac/main/assets"
 
 say()  { print -P "%F{cyan}==>%f $*"; }
 fail() { print -P "%F{red}ОШИБКА:%f $*" >&2; exit 1; }
@@ -160,11 +161,17 @@ export WINEPREFIX="$WINEPREFIX" WINEDLLOVERRIDES="mscoree=n" WINEDEBUG=-all MVK_
 cd "$2" && exec wine BackOffice.exe
 EOF
   chmod +x "$app/Contents/MacOS/run"
+  mkdir -p "$app/Contents/Resources"
+  local here="${0:A:h}/assets/$1.icns"
+  if [[ -f "$here" ]]; then cp "$here" "$app/Contents/Resources/AppIcon.icns"
+  else curl -fsSL -m 30 -o "$app/Contents/Resources/AppIcon.icns" "$ICON_BASE/$1.icns" || rm -f "$app/Contents/Resources/AppIcon.icns"; fi
   cat > "$app/Contents/Info.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
   <key>CFBundleName</key><string>$1</string>
+  <key>CFBundleDisplayName</key><string>$1</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundleIdentifier</key><string>local.iiko-mac.$1</string>
   <key>CFBundleExecutable</key><string>run</string>
   <key>CFBundlePackageType</key><string>APPL</string>
